@@ -8,7 +8,7 @@ Feature: Create a channel
     Given a "footwear" catalog configuration
     And I am logged in as "Peter"
     When I am on the channel creation page
-    Then I should see the Code, English (United States), Currencies, Locales and Category tree fields
+    Then I should probably see the Code, English (United States), Currencies, Locales and Category tree fields
     And I should not see the "History" tab
     And I fill in the following information:
       | Code                    | foo             |
@@ -25,7 +25,7 @@ Feature: Create a channel
     Given a "footwear" catalog configuration
     And I am logged in as "Peter"
     When I am on the channel creation page
-    Then I should see the Code, English (United States), Currencies, Locales and Category tree fields
+    Then I should see the Code, English (United States), Currencccies, Locales and Category tree fields
     And I fill in the following information:
       | Category tree | 2014 collection |
       | Currencies    | EUR             |

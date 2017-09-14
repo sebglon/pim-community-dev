@@ -60,9 +60,9 @@ stage("Build") {
                 sh "bin/console --ansi pim:installer:dump-require-paths"
             }
             container("node") {
-                sh "npm config set cache /shared/.npm --global"
-                sh "npm install --color=always"
-                sh "npm run webpack --color=always"
+                sh "yarn config set cache-folder /shared/.yarn"
+                sh "yarn install --no-progress"
+                sh "yarn run webpack"
             }
             container("docker") {
                 sh "docker build -t eu.gcr.io/akeneo-ci/pim-community-dev:pull-request-${env.CHANGE_ID}-build-${env.BUILD_NUMBER}-ce ."
@@ -78,24 +78,24 @@ stage("Build") {
             sh "mkdir -m 777 vendor"
 
             container("php") {
-                sh "composer config --global process-timeout 900"
-                sh "php -d memory_limit=-1 /usr/bin/composer update --ansi --optimize-autoloader --no-interaction --no-progress --prefer-dist --no-scripts --ignore-platform-reqs --no-suggest"
+                sh "composer update --ansi --optimize-autoloader --no-interaction --no-progress --prefer-dist --no-scripts --ignore-platform-reqs --no-suggest"
+
                 // Required to avoid permission error when "deleteDir()"
                 sh "chmod 777 -R vendor/akeneo"
+
                 dir('vendor/akeneo/pim-community-dev') {
                     deleteDir()
                     checkout scm
                 }
+
                 sh "php -d memory_limit=-1 /usr/bin/composer --ansi -n run-script post-update-cmd"
                 sh "bin/console --ansi assets:install"
                 sh "bin/console --ansi pim:installer:dump-require-paths"
             }
             container("node") {
-                sh "npm config set cache /shared/.npm --global"
-                // Required to avoid permission error
-                sh "npm config set unsafe-perm true"
-                sh "npm install --color=always"
-                sh "npm run webpack --color=always"
+                sh "yarn config set cache-folder /shared/.yarn"
+                sh "yarn install --no-progress"
+                sh "yarn run webpack"
             }
             container("docker") {
                 // Compatibility layer while the EE is not up to date with the new CI
@@ -146,8 +146,8 @@ stage("Test") {
             },
             "grunt": {
                 withNode({
-                    sh "cd /home/jenkins/pim && npm run webpack --color=always"
-                    sh "cd /home/jenkins/pim && npm run lint --color=always"
+                    sh "cd /home/jenkins/pim && yarn run webpack --no-progress"
+                    sh "cd /home/jenkins/pim && yarn run lint"
                 })
             },
             "php-coupling-detector": {
@@ -157,7 +157,7 @@ stage("Test") {
             },
             "phpunit-integration-ce": {
                 queue({
-                    files = sh (returnStdout: true, script: 'find /home/jenkins/pim/src -name "*Integration.php"').tokenize('\n')
+                    files = sh (returnStdout: true, script: 'find /home/jenkins/pim/src/Pim/Component -name "*Integration.php"').tokenize('\n')
                     messages = new net.sf.json.JSONArray()
 
                     for (file in files) {
@@ -175,11 +175,11 @@ stage("Test") {
                     }
 
                     return messages
-                }, 40, "ce")
+                }, 5, "ce")
             },
             "behat-ce": {
                 queue({
-                    scenarios = sh (returnStdout: true, script: 'find /home/jenkins/pim/features -name "*.feature" -exec grep -En "(Scenario|Scenario Outline): " {} +').tokenize('\n')
+                    scenarios = sh (returnStdout: true, script: 'find /home/jenkins/pim/features/channel -name "*.feature" -exec grep -En "(Scenario|Scenario Outline): " {} +').tokenize('\n')
                     messages = new net.sf.json.JSONArray()
 
                     for (scenario in scenarios) {
@@ -206,11 +206,11 @@ stage("Test") {
                     }
 
                     return messages
-                }, 150, "ce")
+                }, 5, "ce")
             },
             "phpunit-integration-ee": {
                 queue({
-                    files = sh (returnStdout: true, script: 'find /home/jenkins/pim/src -name "*Integration.php"').tokenize('\n')
+                    files = sh (returnStdout: true, script: 'find /home/jenkins/pim/src/PimEnterprise/Component -name "*Integration.php"').tokenize('\n')
                     messages = new net.sf.json.JSONArray()
 
                     for (file in files) {
@@ -228,11 +228,11 @@ stage("Test") {
                     }
 
                     return messages
-                }, 20, "ee")
+                }, 5, "ee")
             },
             "behat-ee": {
                 queue({
-                    scenarios = sh (returnStdout: true, script: 'find /home/jenkins/pim/features /home/jenkins/pim/vendor/akeneo/pim-community-dev/features -name "*.feature" -exec grep -En "(Scenario|Scenario Outline): " {} +').tokenize('\n')
+                    scenarios = sh (returnStdout: true, script: 'find /home/jenkins/pim/features/dashboard /home/jenkins/pim/vendor/akeneo/pim-community-dev/features/channel -name "*.feature" -exec grep -En "(Scenario|Scenario Outline): " {} +').tokenize('\n')
                     messages = new net.sf.json.JSONArray()
 
                     for (scenario in scenarios) {
@@ -259,7 +259,7 @@ stage("Test") {
                     }
 
                     return messages
-                }, 200, "ee")
+                }, 5, "ee")
             }
         )
     } finally {
